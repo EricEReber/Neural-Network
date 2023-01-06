@@ -1,27 +1,25 @@
-import numpy as np
+import math
+import autograd.numpy as np
 from Schedulers import *
-from utils import *
+from activationFunctions import *
+from costFunctions import *
+from autograd import grad, elementwise_grad
+from random import random, seed
 from copy import deepcopy
-from sklearn.preprocessing import MinMaxScaler
+from typing import Tuple, Callable
+from sklearn.utils import resample
 
 
 class FFNN:
     """
     Feed Forward Neural Network
-
     Attributes:
         dimensions (list[int]): A list of positive integers, which defines our layers. The first number
         is the input layer, and how many nodes it has. The last number is our output layer. The numbers
         in between define how many hidden layers we have, and how many nodes they have.
-
         hidden_func (Callable): The activation function for the hidden layers
-
         output_func (Callable): The activation function for the output layer
-
         cost_func (Callable): Our cost function
-
-        checkpoint_file (string): A file path where our weights will be saved
-
         weights (list): A list of numpy arrays, containing our weights
     """
 
@@ -31,20 +29,18 @@ class FFNN:
         hidden_func: Callable = sigmoid,
         output_func: Callable = lambda x: x,
         cost_func: Callable = CostOLS,
-        checkpoint_file: str = None,
         seed: int = None,
     ):
+        self.dimensions = dimensions
+        self.hidden_func = hidden_func
+        self.output_func = output_func
+        self.cost_func = cost_func
+        self.seed = seed
         self.weights = list()
         self.schedulers_weight = list()
         self.schedulers_bias = list()
         self.a_matrices = list()
         self.z_matrices = list()
-        self.dimensions = dimensions
-        self.hidden_func = hidden_func
-        self.output_func = output_func
-        self.cost_func = cost_func
-        self.checkpoint_file = checkpoint_file
-        self.seed = seed
 
         # weight initialization
         for i in range(len(self.dimensions) - 1):
@@ -61,32 +57,31 @@ class FFNN:
         self,
         X: np.ndarray,
         t: np.ndarray,
-        scheduler_class,
-        *args,  # arguments for the scheduler
+        scheduler_class: Scheduler,
+        *scheduler_args: list(),
         batches: int = 1,
         epochs: int = 1000,
         lam: float = 0,
-        X_test: np.ndarray = None,
-        t_test: np.ndarray = None,
-        use_best_weights: bool = False,
+        X_val: np.ndarray = None,
+        t_val: np.ndarray = None,
     ):
         """
         Trains the neural network via feedforward and backpropagation
-
         :param X: training data
         :param t: target data
         :param scheduler_class: specified scheduler
-        :param args: scheduler args
-        :param batches: batches to split data into
-        :param epochs: how many epochs for training
-        :param lam: regularization parameter
-        :param use_best_weights: save the best weights and only use them. This runs slower because
-        it has to check every epoch if it is better than the best. Only use with X_test set
-
+        :param scheduler_args: list of all arguments necessary for scheduler
+        :param batches: number of batches, default equal to 1
+        :param epochs: amount of epochs to train, default equal to 1000 (can take a long time)
+        :param lam: regularization hyperparameter lambda
+        :param X_val validation set
+        :param t_val validation target set
         :return: scores dictionary containing test and train error amongst other things
         """
 
         # --------- setup ---------
+        if self.seed is not None:
+            np.random.seed(self.seed)
 
         classification = False
         if (
@@ -96,14 +91,12 @@ class FFNN:
             classification = True
 
         test_set = False
-        if X_test is not None and t_test is not None:
+        if X_val is not None and t_val is not None:
             test_set = True
 
         # --- arrays of scores over epochs ----
         train_errors = np.empty(epochs)
-        train_errors.fill(
-            np.nan
-        )  # nan makes for better plots if we cancel early (they are not plotted)
+        train_errors.fill(np.nan)
         test_errors = np.empty(epochs)
         test_errors.fill(np.nan)
 
@@ -117,11 +110,6 @@ class FFNN:
 
         batch_size = X.shape[0] // batches
 
-        if self.seed is not None:
-            np.random.seed(self.seed)
-
-        # logic for getting the best weights
-        best_weights = deepcopy(self.weights)
         best_test_error = 10e20
         best_test_acc = 0
         best_train_error = 10e20
@@ -129,20 +117,17 @@ class FFNN:
 
         X, t = resample(X, t)
 
-        checkpoint_length = epochs // 10
-        checkpoint_num = 0
-
         # this function returns a function valued only at X
         cost_function_train = self.cost_func(t)  # used for performance metrics
         if test_set:
-            cost_function_test = self.cost_func(t_test)
+            cost_function_test = self.cost_func(t_val)
 
         # create schedulers for each weight matrix
         for i in range(len(self.weights)):
-            self.schedulers_weight.append(scheduler_class(*args))
-            self.schedulers_bias.append(scheduler_class(*args))
+            self.schedulers_weight.append(scheduler_class(*scheduler_args))
+            self.schedulers_bias.append(scheduler_class(*scheduler_args))
 
-        print(f"{scheduler_class.__name__}: Eta={args[0]}, Lambda={lam}")
+        print(f"{scheduler_class.__name__}: Eta={scheduler_args[0]}, Lambda={lam}")
         # this try is only so that we may cancel early by hitting ctrl+c
         try:
             for e in range(epochs):
@@ -177,81 +162,73 @@ class FFNN:
                     test_error = None
                     train_acc = None
                     test_acc = None
-                    break
+                    raise OverflowError
                 if test_set:
-                    prediction_test = self.predict(X_test, raw=True)
+                    prediction_test = self.predict(X_val, raw=True)
                     test_error = cost_function_test(prediction_test)
-
-                    if use_best_weights:
-                        if test_error < best_test_error:
-                            best_test_error = test_error
-                            best_train_error = train_error
-                            best_weights = deepcopy(self.weights)
-                    else:
-                        best_test_error = test_error
-                        best_train_error = train_error
+                    best_test_error = test_error
+                    best_train_error = train_error
 
                 else:
-                    test_errors = np.nan  # a
+                    test_errors = np.nan
 
                 train_acc = None
                 test_acc = None
                 if classification:
-                    train_acc = accuracy(self.predict(X, raw=False), t)
+                    train_acc = self._accuracy(self.predict(X, raw=False), t)
                     train_accs[e] = train_acc
                     if test_set:
-                        test_acc = accuracy(self.predict(X_test, raw=False), t_test)
+                        test_acc = self._accuracy(self.predict(X_val, raw=False), t_val)
                         test_accs[e] = test_acc
-                        if use_best_weights:
-                            if test_acc > best_test_acc:
-                                best_test_acc = test_acc
-                                best_train_acc = train_acc
-                                best_weights = deepcopy(self.weights)
-                        else:
-                            best_test_acc = test_acc
-                            best_train_acc = train_acc
+                        best_test_acc = test_acc
+                        best_train_acc = train_acc
 
                 train_errors[e] = train_error
-                test_errors[e] = test_error
-                progression = e / epochs
+                if not test_set:
+                    progression = e / epochs
 
-                # ----- printing progress bar ------------
-                length = self._progress_bar(
-                    progression,
-                    train_error=train_error,
-                    test_error=test_error,
-                    train_acc=train_acc,
-                    test_acc=test_acc,
-                )
+                    # ----- printing progress bar ------------
+                    length = self._progress_bar(
+                        progression,
+                        train_error=train_error,
+                        train_acc=train_acc,
+                        test_acc=test_acc,
+                    )
 
-                # save to file every 10% if checkpoint file given
-                if (e % checkpoint_length == 0 and self.checkpoint_file and e) or (
-                    e == epochs - 1 and self.checkpoint_file
-                ):
-                    print(" " * length, end="\r")
-                    checkpoint_num += 1
-                    print()
-                    print(f"{checkpoint_num}/10: Checkpoint reached")
-                    self.write(self.checkpoint_file)
+                if test_set:
+                    test_errors[e] = test_error
+                    progression = e / epochs
 
+                    # ----- printing progress bar ------------
+                    length = self._progress_bar(
+                        progression,
+                        train_error=train_error,
+                        test_error=test_error,
+                        train_acc=train_acc,
+                        test_acc=test_acc,
+                    )
         except KeyboardInterrupt:
             # allows for stopping training at any point and seeing the result
             pass
 
         # overwrite last print so that we dont get 99.9 %
         print(" " * length, end="\r")
-        self._progress_bar(
-            1,
-            train_error=train_error,
-            test_error=test_error,
-            train_acc=train_acc,
-            test_acc=test_acc,
-        )
-        print()
-
-        # update weights if specified
-        if use_best_weights:
-            self.weights = best_weights
+        if not test_set:
+            self._progress_bar(
+                1,
+                train_error=train_error,
+                train_acc=train_acc,
+            )
+            print()
+        else:
+            self._progress_bar(
+                1,
+                train_error=train_error,
+                test_error=test_error,
+                train_acc=train_acc,
+                test_acc=test_acc,
+            )
+            print()
 
         # return performance metrics for the entire run
         scores = dict()
@@ -276,10 +253,8 @@ class FFNN:
     def predict(self, X: np.ndarray, *, raw=False, threshold=0.5):
         """
         Return a prediction vector for each row in X
-
         Parameters:
             X (np.ndarray): The design matrix, with n rows of p features each
-
         Returns:
             z (np.ndarray): A prediction vector (row) for each row in our design matrix
             This vector is thresholded if we are dealing with classification and raw is not True
@@ -314,10 +289,8 @@ class FFNN:
     def _feedforward(self, X: np.ndarray):
         """
         Return a prediction vector for each row in X
-
         Parameters:
             X (np.ndarray): The design matrix, with n rows of p features each
-
             Returns:
             z (np.ndarray): A prediction vector (row) for each row in our design matrix
         """
@@ -360,11 +333,9 @@ class FFNN:
     def _backpropagate(self, X, t, lam):
         """
         Perform backpropagation
-
         Parameters:
             X (np.ndarray): The design matrix, with n rows of p features each
             t (np.ndarray): The target vector, with n rows of p targets
-
         Returns:
             does not return anything, but updates the weights
         """
@@ -373,10 +344,12 @@ class FFNN:
         update_list = list()
 
         for i in range(len(self.weights) - 1, -1, -1):
-
             # creating the delta terms
             if i == len(self.weights) - 1:
-                if self.output_func.__name__ == "softmax":
+                if (
+                    self.output_func.__name__ == "softmax"
+                    and self.cost_func.__name__ == "CostCrossEntropy"
+                ):
                     # here we just assume that if softmax, our cost function is cross entropy loss
                     delta_matrix = self.a_matrices[i + 1] - t
                 else:
@@ -429,18 +402,44 @@ class FFNN:
         for i in range(len(self.weights)):
             self.weights[i] -= update_list[i]
 
+    def _accuracy(self, prediction: np.ndarray, target: np.ndarray):
+        """
+        Calculates accuracy of given prediction to target
+        """
+        assert prediction.size == target.size
+        return np.average((target == prediction))
+
     def _progress_bar(self, progression, **kwargs):
+        """
+        Displays progress of training
+        """
         length = 40
         num_equals = int(progression * length)
         num_not = length - num_equals
         arrow = ">" if num_equals > 0 else ""
         bar = "[" + "=" * (num_equals - 1) + arrow + "-" * num_not + "]"
-        perc_print = fmt(progression * 100, N=5)
+        perc_print = self._fmt(progression * 100, N=5)
         line = f"  {bar} {perc_print}% "
 
         for key in kwargs:
             if kwargs[key]:
-                value = fmt(kwargs[key], N=4)
+                value = self._fmt(kwargs[key], N=4)
                 line += f"| {key}: {value} "
         print(line, end="\r")
         return len(line)
+
+    def _fmt(self, value, N=4):
+        """
+        Formats decimal numbers for progress bar
+        """
+        if value > 0:
+            v = value
+        elif value < 0:
+            v = -10 * value
+        else:
+            v = 1
+        n = 1 + math.floor(math.log10(v))
+        if n >= N - 1:
+            return str(round(value))
+            # or overflow
+        return f"{value:.{N-n-1}f}"
