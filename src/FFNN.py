@@ -91,9 +91,12 @@ class FFNN:
             V   :param batches: number of batches the datasets are split into, default equal to 1
             VI  :param epochs: number of iterations used to train the network, default equal to 100
             VII :param lam: regularization hyperparameter lambda
-            VIII:param X_val validation set
-            IX  :param t_val validation target set
-            X   :return: scores dictionary containing test and train error amongst other things
+            VIII:param X_val: validation set
+            IX  :param t_val: validation target set
+        Returns: 
+            
+            scores: A dictionary containing the performance metrics of the model. The number of the metrics 
+                    depends on the parameters passed to the fit-function.
 
         """
 
@@ -135,7 +138,7 @@ class FFNN:
 
         X, t = resample(X, t)
 
-        # this function/method returns a function valued only at X
+        # this function returns a function valued only at X
         cost_function_train = self.cost_func(t)  # used for performance metrics
         if test_set:
             cost_function_test = self.cost_func(t_val)
@@ -229,7 +232,6 @@ class FFNN:
             pass
 
         # visualization of training progression (similiar to tensorflow progression bar)
-        # overwrite last print so that we dont get 99.9 %
         print(" " * length, end="\r")
         if not test_set:
             self._progress_bar(
@@ -271,21 +273,26 @@ class FFNN:
 
     def predict(self, X: np.ndarray, *, raw=False, threshold=0.5):
         """
-        Performs prediction after training of the network has been finished,
-        labelling the output as either 1 or 0 in the case of classification, 
-        or decimal numbers in the case of regression.  
+        Description: 
+            
+            Performs prediction after training of the network has been finished.
 
         Parameters:
         
-        I.  X (np.ndarray): The design matrix, with n rows of p features each
+            I.  X (np.ndarray): The design matrix, with n rows of p features each
 
         Returns:
-        I.  z (np.ndarray): A prediction vector (row) for each row in our design matrix
-            This vector is thresholded if we are dealing with classification and raw if not True
+
+            I.  z (np.ndarray): A prediction vector (row) for each row in our design matrix
+                This vector is thresholded if we are dealing with classification and raw if not True.
+                (Meaning that classification results in a vector of 1s and 0s, while regressions in 
+                an array of decimal numbers)
 
         """
 
         predict = self._feedforward(X)
+        # boolean == True is equivalent with the model performing regression 
+        # (in other words, having no activation function in the output layer)
         if raw:
             return predict
         elif (
@@ -298,10 +305,13 @@ class FFNN:
 
     def reset_weights(self):
         """
-        Resets weights in order to train the neural network for better
+        Description: 
+
+            Resets/Reinitializes the weights in order to train the network for a new problem. 
         """
         if self.seed is not None:
             np.random.seed(self.seed)
+            
         self.weights = list()
         for i in range(len(self.dimensions) - 1):
             weight_array = np.random.randn(
@@ -313,11 +323,17 @@ class FFNN:
 
     def _feedforward(self, X: np.ndarray):
         """
-        Return a prediction vector for each row in X
+        Description: 
+
+            Return a prediction vector for each row in X
+        
         Parameters:
-            X (np.ndarray): The design matrix, with n rows of p features each
-            Returns:
-            z (np.ndarray): A prediction vector (row) for each row in our design matrix
+        
+            I.  X (np.ndarray): The design matrix, with n rows of p features each
+        
+        Returns:
+            
+            I.  z (np.ndarray): A prediction vector (row) for each row in our design matrix
         """
 
         # reset matrices
