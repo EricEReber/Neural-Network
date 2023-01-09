@@ -77,21 +77,23 @@ class FFNN:
         t_val: np.ndarray = None,
     ):
         """
-        This function performs the training the neural network by performing the feedforward and backpropagation
-        algorithm to update the networks weights. 
+        Description: 
+            
+            This function performs the training the neural network by performing the feedforward and backpropagation
+            algorithm to update the networks weights. 
 
         Parameters: 
 
-        I   :param X: training data
-        II  :param t: target data
-        III :param scheduler_class: specified scheduler (algorithm for optimization of gradient descent)
-        IV  :param scheduler_args: list of all arguments necessary for scheduler
-        V   :param batches: number of batches the datasets are split into, default equal to 1
-        VI  :param epochs: number of iterations used to train the network, default equal to 100
-        VII :param lam: regularization hyperparameter lambda
-        VIII:param X_val validation set
-        IX  :param t_val validation target set
-        X   :return: scores dictionary containing test and train error amongst other things
+            I   :param X: training data
+            II  :param t: target data
+            III :param scheduler_class: specified scheduler (algorithm for optimization of gradient descent)
+            IV  :param scheduler_args: list of all arguments necessary for scheduler
+            V   :param batches: number of batches the datasets are split into, default equal to 1
+            VI  :param epochs: number of iterations used to train the network, default equal to 100
+            VII :param lam: regularization hyperparameter lambda
+            VIII:param X_val validation set
+            IX  :param t_val validation target set
+            X   :return: scores dictionary containing test and train error amongst other things
 
         """
 
@@ -110,7 +112,7 @@ class FFNN:
         if X_val is not None and t_val is not None:
             test_set = True
 
-        # --- arrays of scores over epochs ----
+        # --- Creating arrays for score metrics ----
         train_errors = np.empty(epochs)
         train_errors.fill(np.nan)
         test_errors = np.empty(epochs)
@@ -144,19 +146,19 @@ class FFNN:
             self.schedulers_bias.append(scheduler_class(*scheduler_args))
 
         print(f"{scheduler_class.__name__}: Eta={scheduler_args[0]}, Lambda={lam}")
-        # this try is only so that we may cancel early by hitting ctrl+c
+        # this try allows to abort the code early by pressing Ctrl+c
         try:
             for e in range(epochs):
                 for i in range(batches):
                     # -------- minibatch gradient descent ---------
                     if i == batches - 1:
-                        # if we are on the last, take all thats left
+                        # If the for loop has reached the last batch, take all thats left
                         X_batch = X[i * batch_size :, :]
                         t_batch = t[i * batch_size :, :]
                     else:
                         X_batch = X[i * batch_size : (i + 1) * batch_size, :]
                         t_batch = t[i * batch_size : (i + 1) * batch_size, :]
-
+                    
                     self._feedforward(X_batch)
                     self._backpropagate(X_batch, t_batch, lam)
 
@@ -167,8 +169,7 @@ class FFNN:
                 for scheduler in self.schedulers_bias:
                     scheduler.reset()
 
-                # --------- performance metrics -------
-
+                # --------- Computing performance metrics ---------
                 prediction = self.predict(X, raw=True)
                 train_error = cost_function_train(prediction)
                 if train_error > 10e20:
@@ -227,7 +228,7 @@ class FFNN:
             # allows for stopping training at any point and seeing the result
             pass
 
-        # allows for visualization of training progression 
+        # visualization of training progression (similiar to tensorflow progression bar)
         # overwrite last print so that we dont get 99.9 %
         print(" " * length, end="\r")
         if not test_set:
