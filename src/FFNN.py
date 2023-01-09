@@ -311,7 +311,7 @@ class FFNN:
         """
         if self.seed is not None:
             np.random.seed(self.seed)
-            
+
         self.weights = list()
         for i in range(len(self.dimensions) - 1):
             weight_array = np.random.randn(
@@ -325,7 +325,9 @@ class FFNN:
         """
         Description: 
 
-            Return a prediction vector for each row in X
+            Calculates the activation of each layer starting at the input and ending at the output. 
+            Each following activation is calculated from a weighted sum of each of the preceeding 
+            activations (except in the case of the input layer).
         
         Parameters:
         
