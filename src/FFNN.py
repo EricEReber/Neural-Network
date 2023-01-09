@@ -13,14 +13,14 @@ from sklearn.utils import resample
 class FFNN:
     """
     Description: 
-
+    ------------
         Feed Forward Neural Network with interface enabling flexible design of a 
         nerual networks architecture and the specification of activation function 
         in the hidden layers and output layer respectively. This model can be used 
         for both regression and classification problems, depending on the output function.
 
     Attributes:
-
+    ------------
         I.  dimensions (list[int]): A list of positive integers, which specifies the 
             number of nodes in each of the networks layers. The first integer in the array 
             defines the number of nodes in the input layer, the second integer defines number 
@@ -78,12 +78,12 @@ class FFNN:
     ):
         """
         Description: 
-            
+        ------------ 
             This function performs the training the neural network by performing the feedforward and backpropagation
             algorithm to update the networks weights. 
 
         Parameters: 
-
+        ------------
             I   :param X: training data
             II  :param t: target data
             III :param scheduler_class: specified scheduler (algorithm for optimization of gradient descent)
@@ -93,9 +93,10 @@ class FFNN:
             VII :param lam: regularization hyperparameter lambda
             VIII:param X_val: validation set
             IX  :param t_val: validation target set
+
         Returns: 
-            
-            scores: A dictionary containing the performance metrics of the model. The number of the metrics 
+        ------------
+            I. scores: A dictionary containing the performance metrics of the model. The number of the metrics 
                     depends on the parameters passed to the fit-function.
 
         """
@@ -274,15 +275,15 @@ class FFNN:
     def predict(self, X: np.ndarray, *, raw=False, threshold=0.5):
         """
         Description: 
-            
+        ------------
             Performs prediction after training of the network has been finished.
 
         Parameters:
-        
+        ------------
             I.  X (np.ndarray): The design matrix, with n rows of p features each
 
         Returns:
-
+        ------------
             I.  z (np.ndarray): A prediction vector (row) for each row in our design matrix
                 This vector is thresholded if we are dealing with classification and raw if not True.
                 (Meaning that classification results in a vector of 1s and 0s, while regressions in 
@@ -306,8 +307,9 @@ class FFNN:
     def reset_weights(self):
         """
         Description: 
-
+        ------------
             Resets/Reinitializes the weights in order to train the network for a new problem. 
+        
         """
         if self.seed is not None:
             np.random.seed(self.seed)
@@ -324,17 +326,17 @@ class FFNN:
     def _feedforward(self, X: np.ndarray):
         """
         Description: 
-
+        ------------
             Calculates the activation of each layer starting at the input and ending at the output. 
             Each following activation is calculated from a weighted sum of each of the preceeding 
-            activations (except in the case of the input layer).
+            activations (except in the case of the input layer). 
         
         Parameters:
-        
+        ------------
             I.  X (np.ndarray): The design matrix, with n rows of p features each
         
         Returns:
-            
+        ------------    
             I.  z (np.ndarray): A prediction vector (row) for each row in our design matrix
         """
 
@@ -346,22 +348,24 @@ class FFNN:
         if len(X.shape) == 1:
             X = X.reshape((1, X.shape[0]))
 
-        # put a coloumn of ones as the first coloumn of the design matrix, so that
-        # we have a bias term
+        # Add a coloumn of ones as the first coloumn of the design matrix, in order 
+        # to add bias to our data 
         X = np.hstack([np.ones((X.shape[0], 1)), X])
 
-        # a^0, the nodes in the input layer (one a^0 for each row in X)
+        # a^0, the nodes in the input layer (one a^0 for each row in X - where the 
+        # exponent indicates layer number).
         a = X
         self.a_matrices.append(a)
         self.z_matrices.append(a)
 
-        # the feed forward part
+        # The feed forward algorithm
         for i in range(len(self.weights)):
             if i < len(self.weights) - 1:
                 z = a @ self.weights[i]
                 self.z_matrices.append(z)
                 a = self.hidden_func(z)
-                a = np.hstack([np.ones((a.shape[0], 1)), a])
+                # bias column again added to the data here
+                a = np.hstack([np.ones((a.shape[0], 1)), a]) 
                 self.a_matrices.append(a)
             else:
                 # a^L, the nodes in our output layer
@@ -375,12 +379,24 @@ class FFNN:
 
     def _backpropagate(self, X, t, lam):
         """
-        Perform backpropagation
+        Description: 
+        ------------
+            Performs the backpropagation algorithm. In other words, this method
+            calculates the gradient of all the layers starting at the 
+            output layer, and moving from right to left accumulates the gradient until
+            the input layer is reached. Each layers respective weights are updated while 
+            the algorithm propagates backwards from the output layer (auto-differentation in reverse mode).
+        
         Parameters:
-            X (np.ndarray): The design matrix, with n rows of p features each
-            t (np.ndarray): The target vector, with n rows of p targets
+        ------------
+            I   X (np.ndarray): The design matrix, with n rows of p features each.
+            II  t (np.ndarray): The target vector, with n rows of p targets.
+            III lam (float32): regularization parameter used to punish the weights in case of overfitting
+
         Returns:
-            does not return anything, but updates the weights
+        ------------
+            No return value. 
+
         """
         out_derivative = derivate(self.output_func)
         hidden_derivative = derivate(self.hidden_func)
@@ -393,7 +409,7 @@ class FFNN:
                     self.output_func.__name__ == "softmax"
                     and self.cost_func.__name__ == "CostCrossEntropy"
                 ):
-                    # here we just assume that if softmax, our cost function is cross entropy loss
+                    # If the activation function at the output layer is softmax, the cost function is assumed to be cross entropy loss 
                     delta_matrix = self.a_matrices[i + 1] - t
                 else:
                     cost_func_derivative = grad(self.cost_func(t))
@@ -439,8 +455,14 @@ class FFNN:
 
     def _update_w_and_b(self, update_list):
         """
-        Updates weights and biases using a list of arrays that matches
-        self.weights
+        Description: 
+        ------------
+            Updates weights and biases using a list of arrays that matches
+            self.weights
+
+        Parameters:    
+        ------------
+            I. 
         """
         for i in range(len(self.weights)):
             self.weights[i] -= update_list[i]
