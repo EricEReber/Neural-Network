@@ -12,25 +12,33 @@ from sklearn.utils import resample
 
 class FFNN:
     """
-    Feed Forward Neural Network
-    Attributes:
-        dimensions (list[int]): A list of positive integers, which defines our layers. The first number
-        is the input layer, and how many nodes it has. The last number is our output layer. The numbers
-        in between define how many hidden layers we have, and how many nodes they have.
-        hidden_func (Callable): The activation function for the hidden layers
-        output_func (Callable): The activation function for the output layer
-        cost_func (Callable): Our cost function
-        weights (list): A list of numpy arrays, containing our weights
-    """
+    Description: 
 
+        Feed Forward Neural Network with interface enabling flexible design of a 
+        nerual networks architecture and the specification of activation function 
+        in the hidden layers and output layer respectively. This model can be used 
+        for both regression and classification problems, depending on the output function.
+
+    Attributes:
+
+        I.  dimensions (list[int]): A list of positive integers, which specifies the 
+            number of nodes in each of the networks layers. The first integer in the array 
+            defines the number of nodes in the input layer, the second integer defines number 
+            of nodes in the first hidden layer and so on until the last number, which 
+            specifies the number of nodes in the output layer.
+        II. hidden_func (Callable): The activation function for the hidden layers
+        III.output_func (Callable): The activation function for the output layer
+        IV. cost_func (Callable): Our cost function
+        V.  weights (list): A list of numpy arrays, containing our weights
+    """
     def __init__(
         self,
         dimensions: tuple[int],
         hidden_func: Callable = sigmoid,
         output_func: Callable = lambda x: x,
         cost_func: Callable = CostOLS,
-        seed: int = None,
-    ):
+        seed: int = None, # Used for reproducibility 
+     ):
         self.dimensions = dimensions
         self.hidden_func = hidden_func
         self.output_func = output_func
@@ -42,41 +50,49 @@ class FFNN:
         self.a_matrices = list()
         self.z_matrices = list()
 
-        # weight initialization
+        # The initialization of weights for the Neural Network is done 
+        # the moment an object of FFNN class is created
         for i in range(len(self.dimensions) - 1):
             if self.seed is not None:
                 np.random.seed(self.seed)
             weight_array = np.random.randn(
                 self.dimensions[i] + 1, self.dimensions[i + 1]
             )
+            # Matrix containing weights for the i-th layer in the network
             weight_array[0, :] = np.random.randn(self.dimensions[i + 1]) * 0.1
-
+            
             self.weights.append(weight_array)
+
 
     def fit(
         self,
-        X: np.ndarray,
+        X: np.ndarray, 
         t: np.ndarray,
-        scheduler_class: Scheduler,
+        scheduler_class: Scheduler, 
         *scheduler_args: list(),
         batches: int = 1,
-        epochs: int = 1000,
+        epochs: int = 100,
         lam: float = 0,
         X_val: np.ndarray = None,
         t_val: np.ndarray = None,
     ):
         """
-        Trains the neural network via feedforward and backpropagation
-        :param X: training data
-        :param t: target data
-        :param scheduler_class: specified scheduler
-        :param scheduler_args: list of all arguments necessary for scheduler
-        :param batches: number of batches, default equal to 1
-        :param epochs: amount of epochs to train, default equal to 1000 (can take a long time)
-        :param lam: regularization hyperparameter lambda
-        :param X_val validation set
-        :param t_val validation target set
-        :return: scores dictionary containing test and train error amongst other things
+        This function performs the training the neural network by performing the feedforward and backpropagation
+        algorithm to update the networks weights. 
+
+        Parameters: 
+
+        I   :param X: training data
+        II  :param t: target data
+        III :param scheduler_class: specified scheduler (algorithm for optimization of gradient descent)
+        IV  :param scheduler_args: list of all arguments necessary for scheduler
+        V   :param batches: number of batches the datasets are split into, default equal to 1
+        VI  :param epochs: number of iterations used to train the network, default equal to 100
+        VII :param lam: regularization hyperparameter lambda
+        VIII:param X_val validation set
+        IX  :param t_val validation target set
+        X   :return: scores dictionary containing test and train error amongst other things
+
         """
 
         # --------- setup ---------
@@ -88,7 +104,7 @@ class FFNN:
             self.cost_func.__name__ == "CostLogReg"
             or self.cost_func.__name__ == "CostCrossEntropy"
         ):
-            classification = True
+            classification = True 
 
         test_set = False
         if X_val is not None and t_val is not None:
@@ -117,7 +133,7 @@ class FFNN:
 
         X, t = resample(X, t)
 
-        # this function returns a function valued only at X
+        # this function/method returns a function valued only at X
         cost_function_train = self.cost_func(t)  # used for performance metrics
         if test_set:
             cost_function_test = self.cost_func(t_val)
@@ -144,7 +160,7 @@ class FFNN:
                     self._feedforward(X_batch)
                     self._backpropagate(X_batch, t_batch, lam)
 
-                # reset schedulers every epoch (some schedulers pass in this call)
+                # reset schedulers for each epoch (some schedulers pass in this call)
                 for scheduler in self.schedulers_weight:
                     scheduler.reset()
 
@@ -156,7 +172,7 @@ class FFNN:
                 prediction = self.predict(X, raw=True)
                 train_error = cost_function_train(prediction)
                 if train_error > 10e20:
-                    # if this happens, we have a problem
+                    # Indicates a problem with the training
                     length = 10
                     train_error = None
                     test_error = None
@@ -211,6 +227,7 @@ class FFNN:
             # allows for stopping training at any point and seeing the result
             pass
 
+        # allows for visualization of training progression 
         # overwrite last print so that we dont get 99.9 %
         print(" " * length, end="\r")
         if not test_set:
@@ -250,14 +267,21 @@ class FFNN:
 
         return scores
 
+
     def predict(self, X: np.ndarray, *, raw=False, threshold=0.5):
         """
-        Return a prediction vector for each row in X
+        Performs prediction after training of the network has been finished,
+        labelling the output as either 1 or 0 in the case of classification, 
+        or decimal numbers in the case of regression.  
+
         Parameters:
-            X (np.ndarray): The design matrix, with n rows of p features each
+        
+        I.  X (np.ndarray): The design matrix, with n rows of p features each
+
         Returns:
-            z (np.ndarray): A prediction vector (row) for each row in our design matrix
-            This vector is thresholded if we are dealing with classification and raw is not True
+        I.  z (np.ndarray): A prediction vector (row) for each row in our design matrix
+            This vector is thresholded if we are dealing with classification and raw if not True
+
         """
 
         predict = self._feedforward(X)
@@ -273,7 +297,7 @@ class FFNN:
 
     def reset_weights(self):
         """
-        Resets weights in order to reuse FFNN object for training
+        Resets weights in order to train the neural network for better
         """
         if self.seed is not None:
             np.random.seed(self.seed)
