@@ -360,7 +360,7 @@ class FFNN:
 
         # Add a coloumn of zeros as the first coloumn of the design matrix, in order 
         # to add bias to our data 
-        bias = np.zeros((X.shape[0], 1))
+        bias = np.ones((X.shape[0], 1)) * 0.01
         X = np.hstack([bias, X])
 
         # a^0, the nodes in the input layer (one a^0 for each row in X - where the 
@@ -376,7 +376,7 @@ class FFNN:
                 self.z_matrices.append(z)
                 a = self.hidden_func(z)
                 # bias column again added to the data here
-                bias = np.zeros((a.shape[0], 1))
+                bias = np.ones((a.shape[0], 1)) * 0.01
                 a = np.hstack([bias, a]) 
                 self.a_matrices.append(a)
             else:

@@ -4,7 +4,8 @@ import autograd.numpy as np
 This file contains various cost functions for neural networks
 """
 def CostOLS(target):
-    """Return a function valued only at X, so
+    """
+    Return a function valued only at X, so
     that it may be easily differentiated
     """
 
@@ -15,7 +16,8 @@ def CostOLS(target):
 
 
 def CostLogReg(target):
-    """Return a function valued only at X, so
+    """
+    Return a function valued only at X, so
     that it may be easily differentiated
     """
 
