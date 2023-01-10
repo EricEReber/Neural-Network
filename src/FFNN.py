@@ -21,7 +21,7 @@ class FFNN:
 
     Attributes:
     ------------
-        I.  dimensions (list[int]): A list of positive integers, which specifies the 
+        I.  dimensions (tuple[int]): A list of positive integers, which specifies the 
             number of nodes in each of the networks layers. The first integer in the array 
             defines the number of nodes in the input layer, the second integer defines number 
             of nodes in the first hidden layer and so on until the last number, which 
@@ -84,20 +84,23 @@ class FFNN:
 
         Parameters: 
         ------------
-            I   :param X: training data
-            II  :param t: target data
-            III :param scheduler_class: specified scheduler (algorithm for optimization of gradient descent)
-            IV  :param scheduler_args: list of all arguments necessary for scheduler
-            V   :param batches: number of batches the datasets are split into, default equal to 1
-            VI  :param epochs: number of iterations used to train the network, default equal to 100
-            VII :param lam: regularization hyperparameter lambda
-            VIII:param X_val: validation set
-            IX  :param t_val: validation target set
+            I    X (np.ndarray) : training data
+            II   t (np.ndarray) : target data
+            III  scheduler_class (Scheduler) : specified scheduler (algorithm for optimization of gradient descent)
+            IV   scheduler_args (list[int]) : list of all arguments necessary for scheduler
+
+        Optional Parameters:
+        ------------
+            V    batches (int) : number of batches the datasets are split into, default equal to 1
+            VI   epochs (int) : number of iterations used to train the network, default equal to 100
+            VII  lam (float) : regularization hyperparameter lambda
+            VIII X_val (np.ndarray) : validation set
+            IX   t_val (np.ndarray) : validation target set
 
         Returns: 
         ------------
-            I. scores: A dictionary containing the performance metrics of the model. The number of the metrics 
-                    depends on the parameters passed to the fit-function.
+            I.  scores (dict) : A dictionary containing the performance metrics of the model. The number of the metrics 
+                depends on the parameters passed to the fit-function.
 
         """
 
@@ -112,27 +115,27 @@ class FFNN:
         ):
             classification = True 
 
-        test_set = False
+        val_set = False
         if X_val is not None and t_val is not None:
-            test_set = True
+            val_set = True
 
         # --- Creating arrays for score metrics ----
         train_errors = np.empty(epochs)
         train_errors.fill(np.nan)
-        test_errors = np.empty(epochs)
-        test_errors.fill(np.nan)
+        val_errors = np.empty(epochs)
+        val_errors.fill(np.nan)
 
         train_accs = np.empty(epochs)
         train_accs.fill(np.nan)
-        test_accs = np.empty(epochs)
-        test_accs.fill(np.nan)
+        val_accs = np.empty(epochs)
+        val_accs.fill(np.nan)
 
         self.schedulers_weight = list()
         self.schedulers_bias = list()
 
         batch_size = X.shape[0] // batches
 
-        best_test_error = 10e20
+        best_val_error = 10e20
         best_test_acc = 0
         best_train_error = 10e20
         best_train_acc = 0
@@ -141,7 +144,7 @@ class FFNN:
 
         # this function returns a function valued only at X
         cost_function_train = self.cost_func(t)  # used for performance metrics
-        if test_set:
+        if val_set:
             cost_function_test = self.cost_func(t_val)
 
         # create schedulers for each weight matrix
@@ -174,38 +177,38 @@ class FFNN:
                     scheduler.reset()
 
                 # --------- Computing performance metrics ---------
-                prediction = self.predict(X, raw=True)
+                prediction = self.predict(X, regression=True)
                 train_error = cost_function_train(prediction)
                 if train_error > 10e20:
                     # Indicates a problem with the training
                     length = 10
                     train_error = None
-                    test_error = None
+                    val_error = None
                     train_acc = None
-                    test_acc = None
+                    val_acc = None
                     raise OverflowError
-                if test_set:
-                    prediction_test = self.predict(X_val, raw=True)
-                    test_error = cost_function_test(prediction_test)
-                    best_test_error = test_error
+                if val_set:
+                    prediction_test = self.predict(X_val, regression=True)
+                    val_error = cost_function_test(prediction_test)
+                    best_val_error = val_error
                     best_train_error = train_error
 
                 else:
-                    test_errors = np.nan
+                    val_errors = np.nan
 
                 train_acc = None
-                test_acc = None
+                val_acc = None
                 if classification:
-                    train_acc = self._accuracy(self.predict(X, raw=False), t)
+                    train_acc = self._accuracy(self.predict(X, regression=False), t)
                     train_accs[e] = train_acc
-                    if test_set:
-                        test_acc = self._accuracy(self.predict(X_val, raw=False), t_val)
-                        test_accs[e] = test_acc
-                        best_test_acc = test_acc
+                    if val_set:
+                        val_acc = self._accuracy(self.predict(X_val, regression=False), t_val)
+                        val_accs[e] = val_acc
+                        best_test_acc = val_acc
                         best_train_acc = train_acc
 
                 train_errors[e] = train_error
-                if not test_set:
+                if not val_set:
                     progression = e / epochs
 
                     # ----- printing progress bar ------------
@@ -213,20 +216,20 @@ class FFNN:
                         progression,
                         train_error=train_error,
                         train_acc=train_acc,
-                        test_acc=test_acc,
+                        val_acc=val_acc,
                     )
 
-                if test_set:
-                    test_errors[e] = test_error
+                if val_set:
+                    val_errors[e] = val_error
                     progression = e / epochs
 
                     # ----- printing progress bar ------------
                     length = self._progress_bar(
                         progression,
                         train_error=train_error,
-                        test_error=test_error,
+                        val_error=val_error,
                         train_acc=train_acc,
-                        test_acc=test_acc,
+                        val_acc=val_acc,
                     )
         except KeyboardInterrupt:
             # allows for stopping training at any point and seeing the result
@@ -234,7 +237,7 @@ class FFNN:
 
         # visualization of training progression (similiar to tensorflow progression bar)
         print(" " * length, end="\r")
-        if not test_set:
+        if not val_set:
             self._progress_bar(
                 1,
                 train_error=train_error,
@@ -245,9 +248,9 @@ class FFNN:
             self._progress_bar(
                 1,
                 train_error=train_error,
-                test_error=test_error,
+                val_error=val_error,
                 train_acc=train_acc,
-                test_acc=test_acc,
+                val_acc=val_acc,
             )
             print()
 
@@ -255,46 +258,51 @@ class FFNN:
         scores = dict()
 
         scores["train_errors"] = train_errors
-        scores["final_train_error"] = best_train_error
+        scores["best_train_error"] = best_train_error
 
-        if test_set:
-            scores["test_errors"] = test_errors
-            scores["final_test_error"] = best_test_error
+        if val_set:
+            scores["val_errors"] = val_errors
+            scores["best_val_error"] = best_val_error
 
         if classification:
             scores["train_accs"] = train_accs
-            scores["final_train_acc"] = best_train_acc
+            scores["best_train_acc"] = best_train_acc
 
-            if test_set:
-                scores["test_accs"] = test_accs
-                scores["final_test_acc"] = best_test_acc
+            if val_set:
+                scores["val_accs"] = val_accs
+                scores["best_val_acc"] = best_test_acc
 
         return scores
 
 
-    def predict(self, X: np.ndarray, *, raw=False, threshold=0.5):
+    def predict(self, X: np.ndarray, *, regression=False, threshold=0.5):
         """
         Description: 
         ------------
             Performs prediction after training of the network has been finished.
 
         Parameters:
-        ------------
+       ------------
             I.  X (np.ndarray): The design matrix, with n rows of p features each
+
+        Optional Parameters:
+        ------------
+            II. regression (boolean) : if set to True, performs prediction for regression problems
+            III.threshold (float) : sets minimal value for a prediction to be predicted as the positive class
+                in classification problems
 
         Returns:
         ------------
             I.  z (np.ndarray): A prediction vector (row) for each row in our design matrix
-                This vector is thresholded if we are dealing with classification and raw if not True.
-                (Meaning that classification results in a vector of 1s and 0s, while regressions in 
-                an array of decimal numbers)
+                This vector is thresholded if regression=False, meaning that classification results
+                in a vector of 1s and 0s, while regressions in an array of decimal numbers
 
         """
 
         predict = self._feedforward(X)
         # boolean == True is equivalent with the model performing regression 
         # (in other words, having no activation function in the output layer)
-        if raw:
+        if regression:
             return predict
         elif (
             self.cost_func.__name__ == "CostLogReg"
@@ -303,6 +311,7 @@ class FFNN:
             return np.where(predict > threshold, 1, 0)
         else:
             return predict
+
 
     def reset_weights(self):
         """
@@ -322,6 +331,7 @@ class FFNN:
             weight_array[0, :] = np.random.randn(self.dimensions[i + 1]) * 0.01
 
             self.weights.append(weight_array)
+
 
     def _feedforward(self, X: np.ndarray):
         """
@@ -348,9 +358,10 @@ class FFNN:
         if len(X.shape) == 1:
             X = X.reshape((1, X.shape[0]))
 
-        # Add a coloumn of ones as the first coloumn of the design matrix, in order 
+        # Add a coloumn of zeros as the first coloumn of the design matrix, in order 
         # to add bias to our data 
-        X = np.hstack([np.ones((X.shape[0], 1)), X])
+        bias = np.zeros((X.shape[0], 1))
+        X = np.hstack([bias, X])
 
         # a^0, the nodes in the input layer (one a^0 for each row in X - where the 
         # exponent indicates layer number).
@@ -365,7 +376,8 @@ class FFNN:
                 self.z_matrices.append(z)
                 a = self.hidden_func(z)
                 # bias column again added to the data here
-                a = np.hstack([np.ones((a.shape[0], 1)), a]) 
+                bias = np.zeros((a.shape[0], 1))
+                a = np.hstack([bias, a]) 
                 self.a_matrices.append(a)
             else:
                 # a^L, the nodes in our output layer
@@ -376,6 +388,7 @@ class FFNN:
 
         # this will be a^L
         return a
+
 
     def _backpropagate(self, X, t, lam):
         """
@@ -402,14 +415,14 @@ class FFNN:
         hidden_derivative = derivate(self.hidden_func)
         update_list = list()
 
+        # creating the delta terms
         for i in range(len(self.weights) - 1, -1, -1):
-            # creating the delta terms
+            # delta terms for output
             if i == len(self.weights) - 1:
                 if (
                     self.output_func.__name__ == "softmax"
                     and self.cost_func.__name__ == "CostCrossEntropy"
                 ):
-                    # If the activation function at the output layer is softmax, the cost function is assumed to be cross entropy loss 
                     delta_matrix = self.a_matrices[i + 1] - t
                 else:
                     cost_func_derivative = grad(self.cost_func(t))
@@ -417,6 +430,7 @@ class FFNN:
                         self.z_matrices[i + 1]
                     ) * cost_func_derivative(self.a_matrices[i + 1])
 
+            # delta terms for hidden layer
             else:
                 delta_matrix = (
                     self.weights[i + 1][1:, :] @ delta_matrix.T
@@ -451,21 +465,10 @@ class FFNN:
 
             update_list.insert(0, update_matrix)
 
-        self._update_w_and_b(update_list)
-
-    def _update_w_and_b(self, update_list):
-        """
-        Description: 
-        ------------
-            Updates weights and biases using a list of arrays that matches
-            self.weights
-
-        Parameters:    
-        ------------
-            I. 
-        """
+        # update weights and biases
         for i in range(len(self.weights)):
             self.weights[i] -= update_list[i]
+
 
     def _accuracy(self, prediction: np.ndarray, target: np.ndarray):
         """
@@ -473,6 +476,7 @@ class FFNN:
         """
         assert prediction.size == target.size
         return np.average((target == prediction))
+
 
     def _progress_bar(self, progression, **kwargs):
         """
@@ -492,6 +496,7 @@ class FFNN:
                 line += f"| {key}: {value} "
         print(line, end="\r")
         return len(line)
+
 
     def _fmt(self, value, N=4):
         """
