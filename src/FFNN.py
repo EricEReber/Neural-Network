@@ -302,7 +302,7 @@ class FFNN:
         """
         Description:
         ------------
-        Resets/Reinitializes the weights in order to train the network for a new problem.
+            Resets/Reinitializes the weights in order to train the network for a new problem.
 
         """
         if self.seed is not None:
@@ -441,14 +441,28 @@ class FFNN:
 
     def _accuracy(self, prediction: np.ndarray, target: np.ndarray):
         """
-        Calculates accuracy of given prediction to target
+        Description:
+        ------------
+            Calculates accuracy of given prediction to target
+        
+        Parameters: 
+        ------------
+            I   prediction (np.ndarray): vector of predicitons output network 
+            (1s and 0s in case of classification, and real numbers in case of regression)
+            II  target (np.ndarray): vector of true values (Ideally what the network should predict)
+
+        Returns: 
+        ------------
+            A floating point number representing the percentage of correctly classified instances. 
         """
         assert prediction.size == target.size
         return np.average((target == prediction))
 
     def _initialize_weights(self):
         """
-        Initializes weights of the FFNN, called upon object initiation
+        Description:
+        ------------ 
+            Initializes weights of the FFNN, called upon object initiation
         """
         for i in range(len(self.dimensions) - 1):
             if self.seed is not None:
@@ -463,7 +477,9 @@ class FFNN:
 
     def _progress_bar(self, progression, **kwargs):
         """
-        Displays progress of training
+        Description:
+        ------------ 
+            Displays progress of training
         """
         length = 40
         num_equals = int(progression * length)
@@ -482,7 +498,9 @@ class FFNN:
 
     def _fmt(self, value, N=4):
         """
-        Formats decimal numbers for progress bar
+        Description:
+        ------------ 
+            Formats decimal numbers for progress bar
         """
         if value > 0:
             v = value
