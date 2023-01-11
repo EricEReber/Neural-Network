@@ -22,23 +22,25 @@ batches = 10
 adam_params = [adam_eta, rho, rho2]
 
 np.random.seed(1337)
-X_train, X_test, t_train, t_test = train_test_split(cancer_X, cancer_t)
+X_train, X_val, t_train, t_val = train_test_split(cancer_X, cancer_t)
 scaler = MinMaxScaler()
 scaler.fit(X_train)
 X_train = scaler.transform(X_train)
-X_test = scaler.transform(X_test)
+X_val = scaler.transform(X_val)
 
 dims = (X_train.shape[1], 100, 1)
 neural = FFNN(
     dims, hidden_func=LRELU, output_func=sigmoid, cost_func=CostLogReg, seed=1337
 )
 
-neural.fit(
+scores = neural.fit(
     X_train,
     t_train,
     Adam,
     *adam_params,
     lam=adam_lambda,
     epochs=epochs,
-    batches=batches
+    batches=batches,
+    X_val=X_val,
+    t_val=t_val,
 )
