@@ -20,6 +20,7 @@ adam_lambda = 1e-4
 batches = 10
 
 adam_params = [adam_eta, rho, rho2]
+momentum_params = [0.02, 0.9]
 
 np.random.seed(1337)
 X_train, X_val, t_train, t_val = train_test_split(cancer_X, cancer_t)
@@ -41,6 +42,4 @@ scores = neural.fit(
     lam=adam_lambda,
     epochs=epochs,
     batches=batches,
-    X_val=X_val,
-    t_val=t_val,
 )

@@ -1,5 +1,7 @@
 import math
 import autograd.numpy as np
+import sys
+import warnings
 from Schedulers import *
 from activationFunctions import *
 from costFunctions import *
@@ -9,6 +11,7 @@ from copy import deepcopy
 from typing import Tuple, Callable
 from sklearn.utils import resample
 
+warnings.simplefilter("error")
 
 class FFNN:
     """
@@ -50,8 +53,10 @@ class FFNN:
         self.schedulers_bias = list()
         self.a_matrices = list()
         self.z_matrices = list()
+        self.classification = None
 
         self._initialize_weights()
+        self._set_classification()
 
     def fit(
         self,
@@ -97,13 +102,6 @@ class FFNN:
         if self.seed is not None:
             np.random.seed(self.seed)
 
-        classification = False
-        if (
-            self.cost_func.__name__ == "CostLogReg"
-            or self.cost_func.__name__ == "CostCrossEntropy"
-        ):
-            classification = True
-
         val_set = False
         if X_val is not None and t_val is not None:
             val_set = True
@@ -124,17 +122,12 @@ class FFNN:
 
         batch_size = X.shape[0] // batches
 
-        best_val_error = 10e20
-        best_test_acc = 0
-        best_train_error = 10e20
-        best_train_acc = 0
-
         X, t = resample(X, t)
 
         # this function returns a function valued only at X
-        cost_function_train = self.cost_func(t)  # used for performance metrics
+        cost_function_train = self.cost_func(t)
         if val_set:
-            cost_function_test = self.cost_func(t_val)
+            cost_function_val = self.cost_func(t_val)
 
         # create schedulers for each weight matrix
         for i in range(len(self.weights)):
@@ -165,103 +158,62 @@ class FFNN:
                 for scheduler in self.schedulers_bias:
                     scheduler.reset()
 
-                # TODO should be generalizeable to regression (top part) and classification
-                # or no generalization needed and its just confusing
                 # --------- Computing performance metrics ---------
-                prediction = self.predict(X)
-                train_error = cost_function_train(prediction)
-                if train_error > 10e20:
-                    # Indicates a problem with the training
-                    length = 10
-                    train_error = None
-                    val_error = None
-                    train_acc = None
-                    val_acc = None
-                    raise OverflowError
+                pred_train = self.predict(X)
+                train_error = cost_function_train(pred_train)
+
+                train_errors[e] = train_error
                 if val_set:
-                    prediction_test = self.predict(X_val)
-                    val_error = cost_function_test(prediction_test)
-                    best_val_error = val_error
-                    best_train_error = train_error
+                    pred_val = self.predict(X_val)
+                    val_error = cost_function_val(pred_val)
+                    val_errors[e] = val_error
 
-                else:
-                    val_errors = np.nan
-
-                train_acc = None
-                val_acc = None
-
-                if classification:
+                if self.classification:
                     train_acc = self._accuracy(self.predict(X), t)
                     train_accs[e] = train_acc
                     if val_set:
                         val_acc = self._accuracy(
-                            self.predict(X_val), t_val
+                            pred_val, t_val
                         )
                         val_accs[e] = val_acc
-                        best_test_acc = val_acc
-                        best_train_acc = train_acc
-
-                train_errors[e] = train_error
 
                 # ----- printing progress bar ------------
-                if not val_set:
-                    progression = e / epochs
-                    length = self._progress_bar(
-                        progression,
-                        train_error=train_error,
-                        train_acc=train_acc,
-                        val_acc=val_acc,
-                    )
-                else:
-                    val_errors[e] = val_error
-                    progression = e / epochs
-                    length = self._progress_bar(
-                        progression,
-                        train_error=train_error,
-                        val_error=val_error,
-                        train_acc=train_acc,
-                        val_acc=val_acc,
-                    )
+                progression = e / epochs
+                print_length = self._progress_bar(
+                    progression,
+                    train_error=train_error,
+                    train_acc=train_acc,
+                    val_error=val_errors[e],
+                    val_acc=val_accs[e],
+                )
         except KeyboardInterrupt:
             # allows for stopping training at any point and seeing the result
             pass
 
         # visualization of training progression (similiar to tensorflow progression bar)
-        print(" " * length, end="\r")
-        if not val_set:
-            self._progress_bar(
-                1,
-                train_error=train_error,
-                train_acc=train_acc,
-            )
-            print()
-        else:
-            self._progress_bar(
-                1,
-                train_error=train_error,
-                val_error=val_error,
-                train_acc=train_acc,
-                val_acc=val_acc,
-            )
-            print()
+        print(" " * print_length, end="\r")
+        self._progress_bar(
+            1,
+            train_error=train_error,
+            train_acc=train_acc,
+            val_error=val_errors[e],
+            val_acc=val_accs[e],
+        )
+        print()
 
         # return performance metrics for the entire run
         scores = dict()
 
         scores["train_errors"] = train_errors
-        scores["best_train_error"] = best_train_error
 
         if val_set:
             scores["val_errors"] = val_errors
-            scores["best_val_error"] = best_val_error
 
-        if classification:
+        if self.classification:
             scores["train_accs"] = train_accs
-            scores["best_train_acc"] = best_train_acc
 
             if val_set:
                 scores["val_accs"] = val_accs
-                scores["best_val_acc"] = best_test_acc
 
         return scores
 
@@ -290,10 +242,7 @@ class FFNN:
 
         predict = self._feedforward(X)
 
-        if (
-            self.cost_func.__name__ == "CostLogReg"
-            or self.cost_func.__name__ == "CostCrossEntropy"
-        ):
+        if self.classification:
             return np.where(predict > threshold, 1, 0)
         else:
             return predict
@@ -364,11 +313,14 @@ class FFNN:
                 a = np.hstack([bias, a])
                 self.a_matrices.append(a)
             else:
-                # a^L, the nodes in our output layer
-                z = a @ self.weights[i]
-                a = self.output_func(z)
-                self.a_matrices.append(a)
-                self.z_matrices.append(z)
+                try:
+                    # a^L, the nodes in our output layer
+                    z = a @ self.weights[i]
+                    a = self.output_func(z)
+                    self.a_matrices.append(a)
+                    self.z_matrices.append(z)
+                except Exception as OverflowError:
+                    print("OverflowError in fit() in FFNN\nHOW TO DEBUG ERROR: Consider lowering your learning rate or scheduler specific parameters such as momentum, or check if your input values need scaling")
 
         # this will be a^L
         return a
@@ -475,15 +427,23 @@ class FFNN:
 
             self.weights.append(weight_array)
 
+    def _set_classification(self):
+        self.classification = False
+        if (
+            self.cost_func.__name__ == "CostLogReg"
+            or self.cost_func.__name__ == "CostCrossEntropy"
+        ):
+            self.classification = True
+
     def _progress_bar(self, progression, **kwargs):
         """
         Description:
         ------------ 
             Displays progress of training
         """
-        length = 40
-        num_equals = int(progression * length)
-        num_not = length - num_equals
+        print_length = 40
+        num_equals = int(progression * print_length)
+        num_not = print_length - num_equals
         arrow = ">" if num_equals > 0 else ""
         bar = "[" + "=" * (num_equals - 1) + arrow + "-" * num_not + "]"
         perc_print = self._fmt(progression * 100, N=5)
