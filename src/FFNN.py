@@ -13,6 +13,7 @@ from sklearn.utils import resample
 
 warnings.simplefilter("error")
 
+
 class FFNN:
     """
     Description:
@@ -41,7 +42,7 @@ class FFNN:
         hidden_func: Callable = sigmoid,
         output_func: Callable = lambda x: x,
         cost_func: Callable = CostOLS,
-        seed: int = None, 
+        seed: int = None,
     ):
         self.dimensions = dimensions
         self.hidden_func = hidden_func
@@ -172,9 +173,7 @@ class FFNN:
                     train_acc = self._accuracy(self.predict(X), t)
                     train_accs[e] = train_acc
                     if val_set:
-                        val_acc = self._accuracy(
-                            pred_val, t_val
-                        )
+                        val_acc = self._accuracy(pred_val, t_val)
                         val_accs[e] = val_acc
 
                 # ----- printing progress bar ------------
@@ -320,7 +319,9 @@ class FFNN:
                     self.a_matrices.append(a)
                     self.z_matrices.append(z)
                 except Exception as OverflowError:
-                    print("OverflowError in fit() in FFNN\nHOW TO DEBUG ERROR: Consider lowering your learning rate or scheduler specific parameters such as momentum, or check if your input values need scaling")
+                    print(
+                        "OverflowError in fit() in FFNN\nHOW TO DEBUG ERROR: Consider lowering your learning rate or scheduler specific parameters such as momentum, or check if your input values need scaling"
+                    )
 
         # this will be a^L
         return a
@@ -396,16 +397,16 @@ class FFNN:
         Description:
         ------------
             Calculates accuracy of given prediction to target
-        
-        Parameters: 
+
+        Parameters:
         ------------
-            I   prediction (np.ndarray): vector of predicitons output network 
+            I   prediction (np.ndarray): vector of predicitons output network
             (1s and 0s in case of classification, and real numbers in case of regression)
             II  target (np.ndarray): vector of true values (Ideally what the network should predict)
 
-        Returns: 
+        Returns:
         ------------
-            A floating point number representing the percentage of correctly classified instances. 
+            A floating point number representing the percentage of correctly classified instances.
         """
         assert prediction.size == target.size
         return np.average((target == prediction))
@@ -413,7 +414,7 @@ class FFNN:
     def _initialize_weights(self):
         """
         Description:
-        ------------ 
+        ------------
             Initializes weights of the FFNN, called upon object initiation
         """
         for i in range(len(self.dimensions) - 1):
@@ -438,7 +439,7 @@ class FFNN:
     def _progress_bar(self, progression, **kwargs):
         """
         Description:
-        ------------ 
+        ------------
             Displays progress of training
         """
         print_length = 40
@@ -459,7 +460,7 @@ class FFNN:
     def _fmt(self, value, N=4):
         """
         Description:
-        ------------ 
+        ------------
             Formats decimal numbers for progress bar
         """
         if value > 0:
