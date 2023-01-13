@@ -3,47 +3,50 @@ import autograd.numpy as np
 """
 This file contains activation functions and their derivatives for neural networks
 """
-def sigmoid(x):
+def identity(X):
+    return X
+
+def sigmoid(X):
     try:
-        return 1.0 / (1 + np.exp(-x))
+        return 1.0 / (1 + np.exp(-X))
     except FloatingPointError:
-        return np.where(x > np.zeros(x.shape), np.ones(x.shape), np.zeros(x.shape))
+        return np.where(X > np.zeros(X.shape), np.ones(X.shape), np.zeros(X.shape))
 
 
-def softmax(x):
-    x = x - np.max(x, axis=-1, keepdims=True)
-    return np.exp(x) / (np.sum(np.exp(x), axis=-1, keepdims=True) + 10e-10)
+def softmax(X):
+    X = X - np.max(X, axis=-1, keepdims=True)
+    return np.exp(X) / (np.sum(np.exp(X), axis=-1, keepdims=True) + 10e-10)
 
 
-def RELU(x: np.ndarray):
-    return np.where(x > np.zeros(x.shape), x, np.zeros(x.shape))
+def RELU(X):
+    return np.where(X > np.zeros(X.shape), X, np.zeros(X.shape))
 
 
-def LRELU(x: np.ndarray):
+def LRELU(X):
     delta = 10e-4
-    return np.where(x > np.zeros(x.shape), x, delta * x)
+    return np.where(X > np.zeros(X.shape), X, delta * X)
 
 
 def derivate(func):
     if func.__name__ == "sigmoid":
 
-        def func(x):
-            return sigmoid(x) * (1 - sigmoid(x))
+        def func(X):
+            return sigmoid(X) * (1 - sigmoid(X))
 
         return func
 
     elif func.__name__ == "RELU":
 
-        def func(x):
-            return np.where(x > 0, 1, 0)
+        def func(X):
+            return np.where(X > 0, 1, 0)
 
         return func
 
     elif func.__name__ == "LRELU":
 
-        def func(x):
+        def func(X):
             delta = 10e-4
-            return np.where(x > 0, 1, delta)
+            return np.where(X > 0, 1, delta)
 
         return func
 

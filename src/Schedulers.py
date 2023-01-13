@@ -30,6 +30,8 @@ class Constant(Scheduler):
     def update_change(self, gradient):
         return self.eta * gradient
 
+    def reset(self):
+        pass
 
 class Momentum(Scheduler):
     def __init__(self, eta: float, momentum: float):
@@ -131,3 +133,4 @@ class Adam(Scheduler):
         self.n_epochs += 1
         self.moment = 0
         self.second = 0
+
