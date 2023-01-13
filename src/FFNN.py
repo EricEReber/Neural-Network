@@ -25,15 +25,15 @@ class FFNN:
 
     Attributes:
     ------------
-        I.  dimensions (tuple[int]): A list of positive integers, which specifies the
+        I   dimensions (tuple[int]): A list of positive integers, which specifies the
             number of nodes in each of the networks layers. The first integer in the array
             defines the number of nodes in the input layer, the second integer defines number
             of nodes in the first hidden layer and so on until the last number, which
             specifies the number of nodes in the output layer.
-        II. hidden_func (Callable): The activation function for the hidden layers
-        III.output_func (Callable): The activation function for the output layer
-        IV. cost_func (Callable): Our cost function
-        V.  seed (int): Sets random seed, makes results reproducible
+        II  hidden_func (Callable): The activation function for the hidden layers
+        III output_func (Callable): The activation function for the output layer
+        IV  cost_func (Callable): Our cost function
+        V   seed (int): Sets random seed, makes results reproducible
     """
 
     def __init__(
@@ -94,8 +94,8 @@ class FFNN:
 
         Returns:
         ------------
-            I.  scores (dict) : A dictionary containing the performance metrics of the model. The number of the metrics
-                depends on the parameters passed to the fit-function.
+            I   scores (dict) : A dictionary containing the performance metrics of the model.
+                The number of the metrics depends on the parameters passed to the fit-function.
 
         """
 
@@ -224,16 +224,16 @@ class FFNN:
 
          Parameters:
         ------------
-             I.  X (np.ndarray): The design matrix, with n rows of p features each
+             I   X (np.ndarray): The design matrix, with n rows of p features each
 
          Optional Parameters:
          ------------
-             II. threshold (float) : sets minimal value for a prediction to be predicted as the positive class
+             II  threshold (float) : sets minimal value for a prediction to be predicted as the positive class
                  in classification problems
 
          Returns:
          ------------
-             I.  z (np.ndarray): A prediction vector (row) for each row in our design matrix
+             I   z (np.ndarray): A prediction vector (row) for each row in our design matrix
                  This vector is thresholded if regression=False, meaning that classification results
                  in a vector of 1s and 0s, while regressions in an array of decimal numbers
 
@@ -275,11 +275,11 @@ class FFNN:
 
         Parameters:
         ------------
-            I.  X (np.ndarray): The design matrix, with n rows of p features each
+            I   X (np.ndarray): The design matrix, with n rows of p features each
 
         Returns:
         ------------
-            I.  z (np.ndarray): A prediction vector (row) for each row in our design matrix
+            I   z (np.ndarray): A prediction vector (row) for each row in our design matrix
         """
 
         # reset matrices
@@ -401,8 +401,8 @@ class FFNN:
         Parameters:
         ------------
             I   prediction (np.ndarray): vector of predicitons output network
-            (1s and 0s in case of classification, and real numbers in case of regression)
-            II  target (np.ndarray): vector of true values (Ideally what the network should predict)
+                (1s and 0s in case of classification, and real numbers in case of regression)
+            II  target (np.ndarray): vector of true values (What the network ideally should predict)
 
         Returns:
         ------------
@@ -429,6 +429,12 @@ class FFNN:
             self.weights.append(weight_array)
 
     def _set_classification(self):
+        """
+        Description:
+        ------------
+            Decides if FFNN acts as classifier (True) og regressor (False),
+            sets self.classification during init()
+        """
         self.classification = False
         if (
             self.cost_func.__name__ == "CostLogReg"
