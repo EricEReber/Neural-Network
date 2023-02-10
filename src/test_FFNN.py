@@ -1,7 +1,7 @@
 from FFNN import FFNN
 from Schedulers import *
 from activationFunctions import *
-from costFunctions import *
+# from costFunctions import *
 from sklearn.datasets import load_breast_cancer
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split

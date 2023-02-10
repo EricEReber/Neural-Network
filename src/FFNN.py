@@ -1,11 +1,11 @@
 import math
-import autograd.numpy as np
+import jax.numpy as np
 import sys
 import warnings
 from Schedulers import *
 from activationFunctions import *
 from costFunctions import *
-from autograd import grad, elementwise_grad
+from jax import grad 
 from random import random, seed
 from copy import deepcopy, copy
 from typing import Tuple, Callable
