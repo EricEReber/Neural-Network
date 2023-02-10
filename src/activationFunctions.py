@@ -1,10 +1,12 @@
 import jax.numpy as jnp 
 from jax import grad 
 from jax import jacobian, vjp
+import numpy as np
+import jax 
 
 
 def sigmoid(x): 
-    return jnp.sum(1.0 / (1.0 + jnp.exp(-x)))
+    return 1.0 / (1.0 + jnp.exp(-x))
 
 def CostLogReg(target): 
 
@@ -31,11 +33,11 @@ def CostCrossEntropy(target):
     return func
 
 def RELU(X): 
-    return jnp.where(X > jnp.zeros(X.shape), X, np.zeros(X.shape))
+    return jnp.where(X > 0, X, 0)
 
 def LRELU(X): 
     delta = 10e-4 
-    return jnp.where(X > jnp.zeros(X.shape), X, delta * X) 
+    return jnp.where(X > 0, 1 ,delta) 
 
 
 def tanh(X): 
@@ -43,7 +45,7 @@ def tanh(X):
     return (jnp.exp(X) - jnp.exp(-X)) / (jnp.exp(X) + jnp.exp(-X))
 
 
-def derivative(func):
+def derivate(func):
     """
     This is a wrapper class which uses autodiff library Jax for 
     computing the derivatives of activation functions. Unfortune-
@@ -55,10 +57,30 @@ def derivative(func):
     efficient computation. 
     """
 
-    if func.__name__ != "tanh" and func.__name__ != 'softmax': 
-        
-        return grad(func)
-    
-    else: 
-        # In the end, only the diagonal is used
-        return jacobian(func)
+    return jacobian(func)
+        # Since in all the cases encountered, the values we're 
+        # looking for are contained in the diagonal of the 
+        # Jacobian matrix, its possible to use the vjp function
+        # in the following way: vjp(func, x) where x = input
+
+
+
+# inputs = jnp.array(np.random.rand(8))
+# targets = jnp.array([1])
+
+# print(sigmoid(inputs))
+# print(jax.nn.sigmoid(inputs))
+
+# print(jnp.diagonal(jax.jacobian(jax.nn.sigmoid)(inputs)))
+# print(jax.jacrev(sigmoid)(inputs))
+
+# print(jax.nn.sigmoid(inputs)*(1 - jax.nn.sigmoid(inputs)))
+# print(RELU(inputs))
+#
+# print(jnp.diagonal(jacobian(RELU)(inputs)))
+# print(jnp.where(RELU(inputs) > 0, 1., 0.))
+# print(vjp(RELU, inputs)[0])
+# print('\n')
+# print(jnp.diagonal(jacobian(LRELU)(inputs)))
+# print(jnp.where(LRELU(inputs) > 0, 1., 0.))
+# print(vjp(LRELU, inputs)[0])

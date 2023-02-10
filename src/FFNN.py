@@ -4,8 +4,8 @@ import sys
 import warnings
 from Schedulers import *
 from activationFunctions import *
-from costFunctions import *
-from jax import grad 
+# from costFunctions import *
+from jax import grad, vjp 
 from random import random, seed
 from copy import deepcopy, copy
 from typing import Tuple, Callable
@@ -353,6 +353,7 @@ class FFNN:
 
         for i in range(len(self.weights) - 1, -1, -1):
             # delta terms for output
+
             if i == len(self.weights) - 1:
                 # for multi-class classification
                 if (
@@ -362,15 +363,15 @@ class FFNN:
                 # for single class classification
                 else:
                     cost_func_derivative = grad(self.cost_func(t))
-                    delta_matrix = out_derivative(
-                        self.z_matrices[i + 1]
+                    delta_matrix = np.diagonal(out_derivative(
+                        self.z_matrices[i + 1])
                     ) * cost_func_derivative(self.a_matrices[i + 1])
 
             # delta terms for hidden layer
             else:
                 delta_matrix = (
                     self.weights[i + 1][1:, :] @ delta_matrix.T
-                ).T * hidden_derivative(self.z_matrices[i + 1])
+                ).T * np.diagonal(hidden_derivative(self.z_matrices[i + 1]))
 
             # calculate gradient
             gradient_weights = self.a_matrices[i][:, 1:].T @ delta_matrix
@@ -386,8 +387,8 @@ class FFNN:
                 [
                     self.schedulers_bias[i].update_change(gradient_bias),
                     self.schedulers_weight[i].update_change(gradient_weights),
-                ]
-            )
+                ])
+            
 
             # update weights and bias
             self.weights[i] -= update_matrix
@@ -408,6 +409,8 @@ class FFNN:
         ------------
             A floating point number representing the percentage of correctly classified instances.
         """
+        print(prediction) 
+        print(target.size)
         assert prediction.size == target.size
         return np.average((target == prediction))
     def _set_classification(self):

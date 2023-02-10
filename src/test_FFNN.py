@@ -6,6 +6,8 @@ from sklearn.datasets import load_breast_cancer
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 import numpy as np
+import jax
+
 
 cancer_dataset = load_breast_cancer()
 cancer_X = cancer_dataset.data
