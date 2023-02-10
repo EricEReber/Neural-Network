@@ -36,7 +36,7 @@ scores = neural.fit(
     t_train,
     Adam(adam_eta, rho, rho2),
     lam=adam_lambda,
-    epochs=epochs,
+    epochs=1,
     batches=batches,
     X_val=X_val,
     t_val=t_val,
