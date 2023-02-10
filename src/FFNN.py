@@ -372,13 +372,13 @@ class FFNN:
                 delta_matrix = (
                     self.weights[i + 1][1:, :] @ delta_matrix.T
                 ).T * np.diagonal(hidden_derivative(self.z_matrices[i + 1]))
-
+            print(delta_matrix)
             # calculate gradient
             gradient_weights = self.a_matrices[i][:, 1:].T @ delta_matrix
             gradient_bias = np.sum(delta_matrix, axis=0).reshape(
                 1, delta_matrix.shape[1]
             )
-
+            
             # regularization term
             gradient_weights += self.weights[i][1:, :] * lam
 
