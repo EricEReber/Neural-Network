@@ -1,54 +1,64 @@
-import autograd.numpy as np
-
-"""
-This file contains activation functions and their derivatives for neural networks
-"""
-def identity(X):
-    return X
-
-def sigmoid(X):
-    try:
-        return 1.0 / (1 + np.exp(-X))
-    except FloatingPointError:
-        return np.where(X > np.zeros(X.shape), np.ones(X.shape), np.zeros(X.shape))
+import jax.numpy as jnp 
+from jax import grad 
+from jax import jacobian, vjp
 
 
-def softmax(X):
-    X = X - np.max(X, axis=-1, keepdims=True)
-    return np.exp(X) / (np.sum(np.exp(X), axis=-1, keepdims=True) + 10e-10)
+def sigmoid(x): 
+    return jnp.sum(1.0 / (1.0 + jnp.exp(-x)))
+
+def CostLogReg(target): 
+
+    def func(X):
+        return -(1.0 / target.shape[0] * jnp.sum(
+            (target * jnp.log(X + 10e-10)) + (1 - target * jnp.log(1 - X + 10e-10))))
+
+    return func
 
 
-def RELU(X):
-    return np.where(X > np.zeros(X.shape), X, np.zeros(X.shape))
+def CostOLS(target): 
+
+    def func(X): 
+        return (1.0 / target.shape[0]) * jnp.sum((target - X) ** 2)
+
+    return func
 
 
-def LRELU(X):
-    delta = 10e-4
-    return np.where(X > np.zeros(X.shape), X, delta * X)
+def CostCrossEntropy(target): 
+
+    def func(X): 
+        return -(1.0 / target.size) * jnp.sum(target * jnp.log(X + 10e-10))
+
+    return func
+
+def RELU(X): 
+    return jnp.where(X > jnp.zeros(X.shape), X, np.zeros(X.shape))
+
+def LRELU(X): 
+    delta = 10e-4 
+    return jnp.where(X > jnp.zeros(X.shape), X, delta * X) 
 
 
-def derivate(func):
-    if func.__name__ == "sigmoid":
+def tanh(X): 
+    # return jnp.sinh(X)/jnp.cosh(X)
+    return (jnp.exp(X) - jnp.exp(-X)) / (jnp.exp(X) + jnp.exp(-X))
 
-        def func(X):
-            return sigmoid(X) * (1 - sigmoid(X))
 
-        return func
+def derivative(func):
+    """
+    This is a wrapper class which uses autodiff library Jax for 
+    computing the derivatives of activation functions. Unfortune-
+    tly the grad() function included in Jax is not compatible 
+    with the softmax or tanh functions, hence why the jacobian 
+    of both functions is computed. Jax docs mention that vjp 
+    function, which is the reverse mode vector-Jacobian product 
+    of the function given as input, can be used for a slightly more
+    efficient computation. 
+    """
 
-    elif func.__name__ == "RELU":
-
-        def func(X):
-            return np.where(X > 0, 1, 0)
-
-        return func
-
-    elif func.__name__ == "LRELU":
-
-        def func(X):
-            delta = 10e-4
-            return np.where(X > 0, 1, delta)
-
-        return func
-
-    else:
-        return elementwise_grad(func)
+    if func.__name__ != "tanh" and func.__name__ != 'softmax': 
+        
+        return grad(func)
+    
+    else: 
+        # In the end, only the diagonal is used
+        return jacobian(func)
