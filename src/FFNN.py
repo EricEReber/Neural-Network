@@ -362,18 +362,27 @@ class FFNN:
                     delta_matrix = self.a_matrices[i + 1] - t
                 # for single class classification
                 else:
-                    cost_func_derivative = grad(self.cost_func(t))
-                    delta_matrix = np.diagonal(out_derivative(
-                        self.z_matrices[i + 1])
-                    ) * cost_func_derivative(self.a_matrices[i + 1])
+                    cost_func_derivative = grad(self.cost_func(t)) 
+                    out_jac = out_derivative(self.z_matrices[i + 1])
+                    out_non_zero = out_jac[out_jac != 0].reshape((-1,1))
+                    
+                    delta_matrix = out_non_zero * cost_func_derivative(self.a_matrices[i + 1])
 
             # delta terms for hidden layer
             else:
+
+                hid_jac = hidden_derivative(self.z_matrices[i + 1])
+                hid_non_zero = hid_jac[hid_jac != 0].reshape((-1,1))
+                
                 delta_matrix = (
                     self.weights[i + 1][1:, :] @ delta_matrix.T
-                ).T * np.diagonal(hidden_derivative(self.z_matrices[i + 1]))
-            print(delta_matrix)
+                ).T * hid_non_zero
             # calculate gradient
+            # jac = jacobian(sigmoid)(self.z_matrices[i + 1])
+
+            # non_zero = jac[jac != 0]
+            # print(non_zero.reshape((-1,1)))
+
             gradient_weights = self.a_matrices[i][:, 1:].T @ delta_matrix
             gradient_bias = np.sum(delta_matrix, axis=0).reshape(
                 1, delta_matrix.shape[1]
