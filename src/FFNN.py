@@ -5,7 +5,7 @@ import warnings
 from Schedulers import *
 from activationFunctions import *
 from costFunctions import *
-from autograd import grad, elementwise_grad
+from autograd import grad, elementwise_grad, jacobian
 from random import random, seed
 from copy import deepcopy, copy
 from typing import Tuple, Callable
@@ -365,13 +365,18 @@ class FFNN:
                     delta_matrix = out_derivative(
                         self.z_matrices[i + 1]
                     ) * cost_func_derivative(self.a_matrices[i + 1])
+                    jac = jacobian(sigmoid)(self.z_matrices[i + 1])
 
+                    non_zero = jac[jac != 0]
+                    print(non_zero.reshape((-1,1)))
+                    
+                    print(out_derivative(self.z_matrices[i + 1]))
+                    sys.exit()
             # delta terms for hidden layer
             else:
                 delta_matrix = (
                     self.weights[i + 1][1:, :] @ delta_matrix.T
                 ).T * hidden_derivative(self.z_matrices[i + 1])
-            print(delta_matrix)
             # calculate gradient
             gradient_weights = self.a_matrices[i][:, 1:].T @ delta_matrix
             gradient_bias = np.sum(delta_matrix, axis=0).reshape(

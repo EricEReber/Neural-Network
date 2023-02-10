@@ -1,5 +1,5 @@
 import autograd.numpy as np
-
+from autograd import jacobian 
 """
 This file contains activation functions and their derivatives for neural networks
 """
@@ -52,3 +52,8 @@ def derivate(func):
 
     else:
         return elementwise_grad(func)
+
+
+inp = np.arange(10.) 
+print(derivate(sigmoid)(inp))
+print(np.diagonal(jacobian(sigmoid)(inp)))
