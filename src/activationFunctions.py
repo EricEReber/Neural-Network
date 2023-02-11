@@ -11,8 +11,8 @@ def sigmoid(x):
 def CostLogReg(target): 
 
     def func(X):
-        return -(1.0 / target.shape[0] * jnp.sum(
-            (target * jnp.log(X + 10e-10)) + (1 - target * jnp.log(1 - X + 10e-10))))
+        return -(1.0 / target.shape[0]) * jnp.sum(
+            (target * jnp.log(X + 10e-10)) + ((1 - target) * jnp.log(1 - X + 10e-10)))
 
     return func
 
@@ -61,6 +61,14 @@ def derivate(func):
         def func(X):
             delta = 10e-4
             return np.where(X > 0, 1, delta)
+
+        return func
+    
+    elif func.__name__ == 'sigmoid':
+
+        def func(X):
+            
+            return sigmoid(X)*(1-sigmoid(X))
 
         return func
         # Since in all the cases encountered, the values we're 

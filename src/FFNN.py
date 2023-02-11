@@ -362,7 +362,7 @@ class FFNN:
                     delta_matrix = self.a_matrices[i + 1] - t
                 # for single class classification
                 else:
-                    cost_func_derivative = grad(self.cost_func(t)) 
+                    cost_func_derivative = grad(self.cost_func(t))
                     out_jac = out_derivative(self.z_matrices[i + 1])
                     out_non_zero = out_jac[out_jac != 0].reshape(self.z_matrices[i + 1].shape)
                     delta_matrix = out_non_zero * cost_func_derivative(self.a_matrices[i + 1])
