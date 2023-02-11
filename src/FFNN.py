@@ -349,7 +349,7 @@ class FFNN:
 
         """
         out_derivative = jacrev(jit(self.output_func))
-        hidden_derivative = jacrev(jit(self.hidden_func))
+        hidden_derivative = derivate(self.hidden_func)
 
         for i in range(len(self.weights) - 1, -1, -1):
             # delta terms for output
@@ -377,10 +377,10 @@ class FFNN:
                 # hid_non_zero = hid_jac[hid_jac!=0]#.reshape(self.z_matrices[i + 1].shape)
                 # print(hid_non_zero)
                 # sys.exit()
-                hid_non_zero = np.where(self.z_matrices[i + 1] > 0, 1, 10e-4)
+                    
                 delta_matrix = (
                     self.weights[i + 1][1:, :] @ delta_matrix.T
-                ).T * hid_non_zero
+                ).T * hidden_derivative(self.z_matrices[i + 1])
 
             # calculate gradient
             # jac = jacobian(sigmoid)(self.z_matrices[i + 1])

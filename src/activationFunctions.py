@@ -56,8 +56,13 @@ def derivate(func):
     of the function given as input, can be used for a slightly more
     efficient computation. 
     """
+    if func.__name__ == 'LRELU': 
 
-    return jacobian(func)
+        def func(X):
+            delta = 10e-4
+            return np.where(X > 0, 1, delta)
+
+        return func
         # Since in all the cases encountered, the values we're 
         # looking for are contained in the diagonal of the 
         # Jacobian matrix, its possible to use the vjp function
