@@ -365,9 +365,7 @@ class FFNN:
                     cost_func_derivative = grad(self.cost_func(t)) 
                     out_jac = out_derivative(self.z_matrices[i + 1])
                     out_non_zero = out_jac[out_jac != 0].reshape(self.z_matrices[i + 1].shape)
-                    # print(out_non_zero.reshape((1, -1)))
                     delta_matrix = out_non_zero * cost_func_derivative(self.a_matrices[i + 1])
-                    # print(delta_matrix.reshape((1, -1)))
             # delta terms for hidden layer
             else:
                 # print(f'shape of z {self.z_matrices[i + 1].shape}')
