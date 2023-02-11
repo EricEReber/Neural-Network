@@ -365,15 +365,19 @@ class FFNN:
                     cost_func_derivative = grad(self.cost_func(t)) 
                     out_jac = out_derivative(self.z_matrices[i + 1])
                     out_non_zero = out_jac[out_jac != 0].reshape(self.z_matrices[i + 1].shape)
-                    print(out_non_zero.shape)
+                    # print(out_non_zero.reshape((1, -1)))
                     delta_matrix = out_non_zero * cost_func_derivative(self.a_matrices[i + 1])
+                    # print(delta_matrix.reshape((1, -1)))
             # delta terms for hidden layer
             else:
-
-                hid_jac = hidden_derivative(self.z_matrices[i + 1])
-                print(derivate(sigmoid)(self.z_matrices))
-                hid_non_zero = hid_jac[hid_jac != 0]#.reshape(self.z_matrices[i + 1].shape)
-                print(hid_non_zero)
+                # print(f'shape of z {self.z_matrices[i + 1].shape}')
+                # hid_jac = hidden_derivative(self.z_matrices[i + 1])
+                # print(f'shape og jacobian {hid_jac.shape}')
+                
+                # hid_non_zero = hid_jac[hid_jac!=0]#.reshape(self.z_matrices[i + 1].shape)
+                # print(hid_non_zero)
+                # sys.exit()
+                hid_non_zero = np.where(self.z_matrices[i + 1] > 0, 1, 10e-4)
                 delta_matrix = (
                     self.weights[i + 1][1:, :] @ delta_matrix.T
                 ).T * hid_non_zero
