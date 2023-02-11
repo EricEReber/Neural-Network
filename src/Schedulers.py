@@ -1,4 +1,4 @@
-import autograd.numpy as np
+import jax.numpy as np
 
 """
 This file, as indicated by its name, contains all the sceduler methods 
