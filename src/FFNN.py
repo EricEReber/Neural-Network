@@ -5,7 +5,7 @@ import warnings
 from Schedulers import *
 from activationFunctions import *
 # from costFunctions import *
-from jax import grad, vjp 
+from jax import grad, vjp , jacrev, jit
 from random import random, seed
 from copy import deepcopy, copy
 from typing import Tuple, Callable
@@ -348,8 +348,8 @@ class FFNN:
             No return value.
 
         """
-        out_derivative = derivate(self.output_func)
-        hidden_derivative = derivate(self.hidden_func)
+        out_derivative = jacrev(jit(self.output_func))
+        hidden_derivative = jacrev(jit(self.hidden_func))
 
         for i in range(len(self.weights) - 1, -1, -1):
             # delta terms for output
@@ -364,19 +364,20 @@ class FFNN:
                 else:
                     cost_func_derivative = grad(self.cost_func(t)) 
                     out_jac = out_derivative(self.z_matrices[i + 1])
-                    out_non_zero = out_jac[out_jac != 0].reshape((-1,1))
-                    
+                    out_non_zero = out_jac[out_jac != 0].reshape(self.z_matrices[i + 1].shape)
+                    print(out_non_zero.shape)
                     delta_matrix = out_non_zero * cost_func_derivative(self.a_matrices[i + 1])
-
             # delta terms for hidden layer
             else:
 
                 hid_jac = hidden_derivative(self.z_matrices[i + 1])
-                hid_non_zero = hid_jac[hid_jac != 0].reshape((-1,1))
-                
+                print(derivate(sigmoid)(self.z_matrices))
+                hid_non_zero = hid_jac[hid_jac != 0]#.reshape(self.z_matrices[i + 1].shape)
+                print(hid_non_zero)
                 delta_matrix = (
                     self.weights[i + 1][1:, :] @ delta_matrix.T
                 ).T * hid_non_zero
+
             # calculate gradient
             # jac = jacobian(sigmoid)(self.z_matrices[i + 1])
 
