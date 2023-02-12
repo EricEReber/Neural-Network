@@ -1,8 +1,13 @@
+import os 
+os.environ['JAX_ENABLE_XLA'] = '1'
 import jax.numpy as np
 from jax import grad, jit, vjp, jacobian, jvp,jacfwd,jacrev, vmap
 import time
 import jax
 import numpy
+from autograd import grad, elementwise_grad
+import autograd.numpy as anp
+
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
@@ -11,22 +16,21 @@ def lrelu(x, alpha=0.01):
     return np.where(x >= 0, x, x *alpha) 
 
 
-def matrix_sigmoid(k, x):
+def matrix_sigmoid(x):
     return np.sum(sigmoid(x))
 
 sigmoid = jit(sigmoid)
 
-# calculate the derivative of the matrix sigmoid function
-matrix_sigmoid_derivative = grad(matrix_sigmoid)
-
-# test the derivative of the matrix sigmoid function
-
 x = np.array(numpy.random.random((40,100)))
 
+def sigmoid(x):
+    return np.sum(1 / (1 + np.exp(-x)))
+
 start = time.time()
-analytical_derivative = sigmoid(x) * (1 - sigmoid(x))
-print(f'Time taken for analytical derivative:  {time.time() - start}')
-print(analytical_derivative)
+der_sig = jax.grad(jit(sigmoid))(x)   
+print(der_sig)
+print(f'Time matrix grad: {time.time() - start}')
+
 
 
 # Pure numpy implementation
@@ -41,12 +45,14 @@ anal_der = sigmoid(x) * (1- sigmoid(x))
 print(f'Time taken for analytical derivative:  {time.time() - start}')
 print(anal_der)
 
+x = anp.array(x)
 
+from numba import njit
 
-# start = time.time()
-# sig_der = vmap(jacfwd(jit(sigmoid)))(x)  
-#
-# print(sig_der.shape)
-# functional = np.diag(sig_der[:,:,0])
-# print(functional) 
-# print(f'Time taken for jax autodiff solution : {time.time() - start}')
+start = time.time() 
+def sigmoid(x): 
+    return 1 / (1 + anp.exp(-x))
+
+grad_sig = elementwise_grad(sigmoid)(x)
+print(grad_sig)
+print(f'Time taken for grad() derivative:  {time.time() - start}')
