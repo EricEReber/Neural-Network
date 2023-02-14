@@ -386,8 +386,21 @@ class FFNN:
                 # print(np.allclose(non_zero.reshape((-1,1)), non_zero2, atol=10e-6))
                 # sys.exit()
             # calculate gradient
-            gradient_weights = self.a_matrices[i][:, 1:].T @ delta_matrix
-            gradient_bias = np.sum(delta_matrix, axis=0).reshape(
+            gradient_weights = np.zeros(
+                (
+                    self.a_matrices[i][:, 1:].shape[0],
+                    self.a_matrices[i][:, 1:].shape[1],
+                    delta_matrix.shape[1],
+                )
+            )
+
+            for j in range(len(delta_matrix)):
+                gradient_weights[j, :, :] = np.outer(
+                    self.a_matrices[i][j, 1:], delta_matrix[j, :]
+                )
+
+            gradient_weights = np.mean(gradient_weights, axis=0)
+            gradient_bias = np.mean(delta_matrix, axis=0).reshape(
                 1, delta_matrix.shape[1]
             )
 
