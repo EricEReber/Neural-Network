@@ -149,7 +149,7 @@ class FFNN:
                         t_batch = t[i * batch_size : (i + 1) * batch_size, :]
 
                     self._feedforward(X_batch)
-                    self._backpropagate(X_batch, t_batch, lam)
+                    self._backpropagate(t_batch, lam)
 
                 # reset schedulers for each epoch (some schedulers pass in this call)
                 for scheduler in self.schedulers_weight:
@@ -327,7 +327,7 @@ class FFNN:
         # this will be a^L
         return a
 
-    def _backpropagate(self, X, t, lam):
+    def _backpropagate(self, t, lam):
         """
         Description:
         ------------
