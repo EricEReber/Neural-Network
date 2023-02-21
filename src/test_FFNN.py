@@ -26,7 +26,7 @@ scaler.fit(X_train)
 X_train = scaler.transform(X_train)
 X_val = scaler.transform(X_val)
 
-dims = (X_train.shape[1], 100, 1)
+dims = (X_train.shape[1], 20, 20, 1)
 neural = FFNN(
     dims, hidden_func=LRELU, output_func=sigmoid, cost_func=CostLogReg, seed=1337
 )
