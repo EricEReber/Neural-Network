@@ -164,10 +164,6 @@ class FFNN:
 
                 train_errors[e] = train_error
                 if val_set:
-<<<<<<< HEAD
-=======
-
->>>>>>> 97218d2495cb2bf866269ecf3de92881576011c2
                     pred_val = self.predict(X_val)
                     val_error = cost_function_val(pred_val)
                     val_errors[e] = val_error
@@ -368,13 +364,10 @@ class FFNN:
                         self.z_matrices[i + 1]
                     ) * cost_func_derivative(self.a_matrices[i + 1])
 
-<<<<<<< HEAD
-=======
                     # non_zero2 = out_derivative(self.z_matrices[i + 1])
                     #
                     # print(np.allclose(non_zero.reshape((-1,1)), non_zero2, atol=10e-5))
 
->>>>>>> 97218d2495cb2bf866269ecf3de92881576011c2
             # delta terms for hidden layer
             else:
                 delta_matrix = (
