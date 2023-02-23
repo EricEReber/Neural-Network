@@ -98,7 +98,7 @@ class FFNN:
 
         """
 
-        # setup 
+        # setup
         if self.seed is not None:
             np.random.seed(self.seed)
 
@@ -164,7 +164,6 @@ class FFNN:
 
                 train_errors[e] = train_error
                 if val_set:
-                    
                     pred_val = self.predict(X_val)
                     val_error = cost_function_val(pred_val)
                     val_errors[e] = val_error
@@ -355,35 +354,22 @@ class FFNN:
             # delta terms for output
             if i == len(self.weights) - 1:
                 # for multi-class classification
-                if (
-                    self.output_func.__name__ == "softmax"
-                ):
+                if self.output_func.__name__ == "softmax":
                     delta_matrix = self.a_matrices[i + 1] - t
                 # for single class classification
                 else:
                     cost_func_derivative = grad(self.cost_func(t))
-                    # jac = jacobian(sigmoid)(self.z_matrices[i + 1])
-                    # non_zero = jac[jac != 0]   # non_zero.reshape(self.z_matrices[i + 1].shape)
 
-                    delta_matrix = out_derivative(self.z_matrices[i + 1]) * cost_func_derivative(self.a_matrices[i + 1])
+                    delta_matrix = out_derivative(
+                        self.z_matrices[i + 1]
+                    ) * cost_func_derivative(self.a_matrices[i + 1])
 
-                    # non_zero2 = out_derivative(self.z_matrices[i + 1])
-                    #
-                    # print(np.allclose(non_zero.reshape((-1,1)), non_zero2, atol=10e-5))
-                      
             # delta terms for hidden layer
             else:
-                # jac = jacobian(LRELU)(self.z_matrices[i + 1])
-                # non_zero = jac[jac != 0]
                 delta_matrix = (
                     self.weights[i + 1][1:, :] @ delta_matrix.T
                 ).T * hidden_derivative(self.z_matrices[i + 1])
-                 
 
-                # non_zero2 = hidden_derivative(self.z_matrices[i + 1])
-                # print(non_zero.reshape(non_zero2.shape))
-                # print(non_zero2)
-                # print(np.allclose(non_zero.reshape((-1,1)), non_zero2, atol=10e-6))
                 # sys.exit()
             # calculate gradient
             gradient_weights = np.zeros(
@@ -436,6 +422,7 @@ class FFNN:
         """
         assert prediction.size == target.size
         return np.average((target == prediction))
+
     def _set_classification(self):
         """
         Description:

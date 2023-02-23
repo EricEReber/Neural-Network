@@ -15,7 +15,7 @@ cancer_t = cancer_t.reshape(cancer_t.shape[0], 1)
 epochs = 200
 rho = 0.9
 rho2 = 0.999
-adam_eta = 1e-4
+adam_eta = 1e-3
 adam_lambda = 1e-4
 batches = 10
 
