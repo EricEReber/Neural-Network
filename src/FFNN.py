@@ -149,7 +149,7 @@ class FFNN:
                         t_batch = t[i * batch_size : (i + 1) * batch_size, :]
 
                     self._feedforward(X_batch)
-                    self._backpropagate(X_batch, t_batch, lam)
+                    self._backpropagate(t_batch, lam)
 
                 # reset schedulers for each epoch (some schedulers pass in this call)
                 for scheduler in self.schedulers_weight:
@@ -164,6 +164,10 @@ class FFNN:
 
                 train_errors[e] = train_error
                 if val_set:
+<<<<<<< HEAD
+=======
+
+>>>>>>> 97218d2495cb2bf866269ecf3de92881576011c2
                     pred_val = self.predict(X_val)
                     val_error = cost_function_val(pred_val)
                     val_errors[e] = val_error
@@ -326,7 +330,7 @@ class FFNN:
         # this will be a^L
         return a
 
-    def _backpropagate(self, X, t, lam):
+    def _backpropagate(self, t, lam):
         """
         Description:
         ------------
@@ -364,6 +368,13 @@ class FFNN:
                         self.z_matrices[i + 1]
                     ) * cost_func_derivative(self.a_matrices[i + 1])
 
+<<<<<<< HEAD
+=======
+                    # non_zero2 = out_derivative(self.z_matrices[i + 1])
+                    #
+                    # print(np.allclose(non_zero.reshape((-1,1)), non_zero2, atol=10e-5))
+
+>>>>>>> 97218d2495cb2bf866269ecf3de92881576011c2
             # delta terms for hidden layer
             else:
                 delta_matrix = (
